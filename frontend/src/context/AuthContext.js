@@ -15,6 +15,11 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
       const data = await getCurrentUser();
       setUser(data.user);
     } catch {

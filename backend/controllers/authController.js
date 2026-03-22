@@ -2,23 +2,6 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken, revokeRefreshToken } = require('../utils/tokenUtils');
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-const setTokenCookies = (res, accessToken, refreshToken) => {
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 15 * 60 * 1000,
-  });
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-};
-
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role, bio, location, specialties, farmName } = req.body;
@@ -35,8 +18,6 @@ exports.register = async (req, res, next) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = await generateRefreshToken(user);
 
-    setTokenCookies(res, accessToken, refreshToken);
-
     res.status(201).json({
       success: true,
       user: {
@@ -47,6 +28,7 @@ exports.register = async (req, res, next) => {
         avatar: user.avatar,
       },
       accessToken,
+      refreshToken,
     });
   } catch (error) {
     next(error);
@@ -70,10 +52,6 @@ exports.login = async (req, res, next) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = await generateRefreshToken(user);
 
-    setTokenCookies(res, accessToken, refreshToken);
-
-    req.session.userId = user._id;
-
     res.json({
       success: true,
       user: {
@@ -84,6 +62,7 @@ exports.login = async (req, res, next) => {
         avatar: user.avatar,
       },
       accessToken,
+      refreshToken,
     });
   } catch (error) {
     next(error);
@@ -92,7 +71,7 @@ exports.login = async (req, res, next) => {
 
 exports.refresh = async (req, res, next) => {
   try {
-    const token = req.cookies.refreshToken;
+    const { refreshToken: token } = req.body;
     if (!token) {
       return next(ApiError.unauthorized('No refresh token'));
     }
@@ -108,9 +87,7 @@ exports.refresh = async (req, res, next) => {
     const accessToken = generateAccessToken(user);
     const newRefreshToken = await generateRefreshToken(user);
 
-    setTokenCookies(res, accessToken, newRefreshToken);
-
-    res.json({ success: true, accessToken });
+    res.json({ success: true, accessToken, refreshToken: newRefreshToken });
   } catch (error) {
     next(ApiError.unauthorized('Invalid refresh token'));
   }
@@ -118,15 +95,10 @@ exports.refresh = async (req, res, next) => {
 
 exports.logout = async (req, res, next) => {
   try {
-    const token = req.cookies.refreshToken;
+    const { refreshToken: token } = req.body;
     if (token) {
       await revokeRefreshToken(token);
     }
-
-    req.session.destroy();
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-    res.clearCookie('connect.sid');
 
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {

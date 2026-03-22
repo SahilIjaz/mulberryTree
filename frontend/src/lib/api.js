@@ -1,15 +1,21 @@
 import { API_BASE_URL } from './constants';
+import { getAccessToken, refreshToken as doRefresh, clearTokens } from './auth';
 
 async function fetchApi(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const token = getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const config = {
-    headers: {
-      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...options.headers,
-    },
-    credentials: 'include',
     ...options,
+    headers,
   };
 
   if (options.body && !(options.body instanceof FormData)) {
@@ -20,14 +26,13 @@ async function fetchApi(endpoint, options = {}) {
 
   // Auto-refresh on 401
   if (response.status === 401 && !endpoint.includes('/auth/refresh')) {
-    const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    if (refreshRes.ok) {
-      response = await fetch(url, config);
-    } else {
+    try {
+      await doRefresh();
+      const newToken = getAccessToken();
+      headers['Authorization'] = `Bearer ${newToken}`;
+      response = await fetch(url, { ...config, headers });
+    } catch {
+      clearTokens();
       window.location.href = '/login';
       throw new Error('Session expired');
     }
