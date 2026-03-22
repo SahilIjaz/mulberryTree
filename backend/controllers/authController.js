@@ -2,17 +2,19 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken, revokeRefreshToken } = require('../utils/tokenUtils');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const setTokenCookies = (res, accessToken, refreshToken) => {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 15 * 60 * 1000,
   });
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };

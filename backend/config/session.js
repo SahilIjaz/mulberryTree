@@ -9,10 +9,11 @@ const sessionConfig = {
     mongoUrl: process.env.MONGO_URI,
     ttl: 24 * 60 * 60,
   }),
+  proxy: process.env.NODE_ENV === 'production',
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000,
   },
 };
