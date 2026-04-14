@@ -6,7 +6,8 @@ const { authorize } = require('../middleware/roles');
 const { uploadSingle, uploadToCloudinary } = require('../middleware/upload');
 const { recipeRules, validate } = require('../middleware/validate');
 
-router.post('/', protect, authorize('chef', 'admin'), uploadSingle, uploadToCloudinary('mulberrytree/recipes'), recipeRules, validate, createRecipe);
+router.post('/', protect, authorize('chef', 'admin'), uploadSingle, 
+uploadToCloudinary('mulberrytree/recipes'), recipeRules, validate, createRecipe);
 router.get('/', getAllRecipes);
 router.get('/:id', getRecipeById);
 router.put('/:id', protect, authorize('chef', 'admin'), uploadSingle, uploadToCloudinary('mulberrytree/recipes'), updateRecipe);
